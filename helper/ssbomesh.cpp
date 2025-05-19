@@ -263,6 +263,8 @@ void SSBOMesh::smoothVertices(const int numIterations, const char outputModelFil
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, buffers[readIdx]);  // Input
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, buffers[writeIdx]); // Output
 
+        cout << "Until compute shader is fine." << endl;
+
         // Dispatch compute shader
         glDispatchCompute((vertices + 255) / 256, 1, 1);
 

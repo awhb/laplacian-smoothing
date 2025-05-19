@@ -22,10 +22,10 @@ using namespace std;
 /////////////////////////////////////////////////////////////////////////////
 
 // Input model filename.
-static const char inputModelFilename[] = "in.obj";
+static const char inputModelFilename[] = "models/in.obj";
 
 // Output model filename.
-static const char outputModelFilename[] = "out.obj";
+static const char outputModelFilename[] = "models/out.obj";
 
 // Shader's filename.
 const char compShaderFile[] = "shader.comp";
@@ -103,7 +103,7 @@ int main(int argc, char** argv)
     try {
         shaderProg.compileShader(compShaderFile, GLSLShader::COMPUTE);
         shaderProg.link();
-        shaderProg.validate();
+        //shaderProg.validate();
         shaderProg.use(); // Install shader program to rendering pipeline.
     }
     catch (GLSLProgramException& e) {
