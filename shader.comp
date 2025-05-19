@@ -1,0 +1,50 @@
+#version 430 core
+
+layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+struct ssboVertex {
+    vec3 position;
+    uint offset;
+    uint valence;
+}; 
+
+// Bindings
+layout(std430, binding = 0) buffer NeighborIndices {
+    uint neighbors[];
+};
+
+layout(std430, binding = 1) buffer VertexInputs {
+    ssboVertex inputVertices[];
+};
+
+layout(std430, binding = 2) buffer VertexOutputs {
+    ssboVertex outputVertices[];
+};
+
+void main() {
+    uint idx = gl_GlobalInvocationID.x;
+
+    if (idx >= inputVertices.length()) return;
+
+    ssboVertex v = inputVertices[idx];
+
+    if (v.valence == 0) {
+        outputVertices[idx] = v;
+        return;
+    }
+
+    vec3 avg = vec3(0.0);
+    for (uint i = 0; i < v.valence; ++i) {
+        uint neighborIdx = neighbors[v.offset + i];
+        avg += inputVertices[neighborIdx].position;
+    }
+
+    avg /= float(v.valence);
+
+    // Classic Laplacian update: move to average of neighbors
+    outputVertices[idx].position = avg;
+
+    // Update other fields (not needed anymore)
+    // outputVertices[idx].offset = v.offset;
+    // outputVertices[idx].valence = v.valence;
+}

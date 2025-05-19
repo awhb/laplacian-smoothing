@@ -1,0 +1,54 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="helper\drawable.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="helper\glslprogram.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="helper\glutils.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="helper\ssbomesh.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="helper\drawable.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="helper\gldecl.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="helper\glslprogram.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="helper\glutils.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="helper\scene.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="helper\ssbomesh.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{9e367603-ed63-461a-943f-2412bb54dbfd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Helpers">
+      <UniqueIdentifier>{86b6a389-05cd-4817-9ed2-b2a642d3febb}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shader.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shader.frag">
+      <Filter>Shaders</Filter>
+    </None>
+  </ItemGroup>
+</Project>
