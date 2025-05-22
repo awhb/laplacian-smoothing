@@ -2,49 +2,61 @@
 
 layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
 
-struct ssboVertex {
-    vec3 position;
-    uint offset;
-    uint valence;
-}; 
-
-// Bindings
-layout(std430, binding = 0) buffer NeighborIndices {
+// === SSBO Bindings ===
+layout(std430, binding = 0) buffer FlatNeighborIndices {
     uint neighbors[];
 };
 
-layout(std430, binding = 1) buffer VertexInputs {
-    ssboVertex inputVertices[];
+layout(std430, binding = 1) buffer VertexValences {
+    uint spans[];
 };
 
-layout(std430, binding = 2) buffer VertexOutputs {
-    ssboVertex outputVertices[];
+layout(std430, binding = 2) buffer VertexOffsets {
+    uint offsets[];
+};
+
+layout(std430, binding = 3) buffer VertexPositions {
+    float positions[]; // 3 * vertices
+};
+
+layout(std430, binding = 4) buffer VertexPositionsOut {
+    float positionsOut[]; // 3 * vertices
 };
 
 void main() {
     uint idx = gl_GlobalInvocationID.x;
 
-    if (idx >= inputVertices.length()) return;
+    // Assume this is run for all vertices, bound externally
+    // Guard in case of over-dispatch
+    if (3 * idx + 2 >= positions.length())
+        return;
 
-    ssboVertex v = inputVertices[idx];
+    uint span = spans[idx];
+    uint offset = offsets[idx];
 
-    if (v.valence == 0) {
-        outputVertices[idx] = v;
+    if (span == 0) {
+        // Copy original position
+        positionsOut[3 * idx + 0] = positions[3 * idx + 0];
+        positionsOut[3 * idx + 1] = positions[3 * idx + 1];
+        positionsOut[3 * idx + 2] = positions[3 * idx + 2];
         return;
     }
 
     vec3 avg = vec3(0.0);
-    for (uint i = 0; i < v.valence; ++i) {
-        uint neighborIdx = neighbors[v.offset + i];
-        avg += inputVertices[neighborIdx].position;
+
+    for (uint i = 0; i < span; ++i) {
+        uint neighborIdx = neighbors[offset + i];
+        vec3 nPos = vec3(
+            positions[3 * neighborIdx + 0],
+            positions[3 * neighborIdx + 1],
+            positions[3 * neighborIdx + 2]
+        );
+        avg += nPos;
     }
 
-    avg /= float(v.valence);
+    avg /= float(span);
 
-    // Classic Laplacian update: move to average of neighbors
-    outputVertices[idx].position = avg;
-
-    // Update other fields (not needed anymore)
-    // outputVertices[idx].offset = v.offset;
-    // outputVertices[idx].valence = v.valence;
+    positionsOut[3 * idx + 0] = avg.x;
+    positionsOut[3 * idx + 1] = avg.y;
+    positionsOut[3 * idx + 2] = avg.z;
 }
