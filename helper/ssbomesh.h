@@ -29,8 +29,6 @@ private:
     GLuint vaoHandle;
     GLuint ssboHandle[6];
 
-    bool reCenterMesh, loadTex, genTang;
-
     void trimString(string& str);
     void storeVBO(
         const vector<vec3>& points,
@@ -47,20 +45,9 @@ private:
         const vector<GLuint>& faces,
         vector<vector<GLuint>>& adjacencies
     );
-    void generateAveragedNormals(
-        const vector<vec3>& points,
-        vector<vec3>& normals,
-        const vector<GLuint>& faces);
-    void generateTangents(
-        const vector<vec3>& points,
-        const vector<vec3>& normals,
-        const vector<GLuint>& faces,
-        const vector<vec2>& texCoords,
-        vector<vec4>& tangents);
-    void center(vector<vec3>&);
 
 public:
-    SSBOMesh(const char* fileName, bool reCenterMesh = false, bool loadTc = false, bool genTangents = false);
+    SSBOMesh(const char* fileName);
 
     void render() const;
 
