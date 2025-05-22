@@ -116,8 +116,6 @@ int main(int argc, char** argv)
     objMesh = new SSBOMesh(inputModelFilename);
     objMesh->smoothVertices(numIterations, outputModelFilename);
 
-    std::cout << "Smoothing complete. Output written to: " << outputModelFilename << "\n";
-
     glfwDestroyWindow(window);
     glfwTerminate();
     return EXIT_SUCCESS;

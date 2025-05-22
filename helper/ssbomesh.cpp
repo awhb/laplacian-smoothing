@@ -13,13 +13,13 @@ using std::ifstream;
 #include <sstream>
 using std::istringstream;
 
-SSBOMesh::SSBOMesh(const char * fileName, bool center, bool loadTc, bool genTangents) :
-        reCenterMesh(center), loadTex(loadTc), genTang(genTangents)
+SSBOMesh::SSBOMesh(const char* fileName, bool center, bool loadTc, bool genTangents) :
+    reCenterMesh(center), loadTex(loadTc), genTang(genTangents)
 {
     loadOBJ(fileName);
 }
 
-void SSBOMesh::loadOBJ( const char * fileName ) {
+void SSBOMesh::loadOBJ(const char* fileName) {
 
     vector <vec3> points;
     vector <vec3> normals;
@@ -28,9 +28,9 @@ void SSBOMesh::loadOBJ( const char * fileName ) {
 
     int nFaces = 0;
 
-    ifstream objStream( fileName, std::ios::in );
+    ifstream objStream(fileName, std::ios::in);
 
-    if( !objStream ) {
+    if (!objStream) {
         cerr << "Unable to open OBJ file: " << fileName << endl;
         exit(1);
     }
@@ -38,71 +38,76 @@ void SSBOMesh::loadOBJ( const char * fileName ) {
     string line, token;
     vector<int> face;
 
-    getline( objStream, line );
-    while( !objStream.eof() ) {
+    getline(objStream, line);
+    while (!objStream.eof()) {
         trimString(line);
-        if( line.length( ) > 0 && line.at(0) != '#' ) {
-            istringstream lineStream( line );
+        if (line.length() > 0 && line.at(0) != '#') {
+            istringstream lineStream(line);
 
             lineStream >> token;
 
-            if (token == "v" ) {
+            if (token == "v") {
                 float x, y, z;
                 lineStream >> x >> y >> z;
-                points.push_back( vec3(x,y,z) );
-            } else if (token == "vt" && loadTex) {
+                points.push_back(vec3(x, y, z));
+            }
+            else if (token == "vt" && loadTex) {
                 // Process texture coordinate
-                float s,t;
+                float s, t;
                 lineStream >> s >> t;
-                texCoords.push_back( vec2(s,t) );
-            } else if (token == "vn" ) {
+                texCoords.push_back(vec2(s, t));
+            }
+            else if (token == "vn") {
                 float x, y, z;
                 lineStream >> x >> y >> z;
-                normals.push_back( vec3(x,y,z) );
-            } else if (token == "f" ) {
+                normals.push_back(vec3(x, y, z));
+            }
+            else if (token == "f") {
                 nFaces++;
 
                 // Process face
                 face.clear();
                 size_t slash1, slash2;
                 //int point, texCoord, normal;
-                while( lineStream.good() ) {
+                while (lineStream.good()) {
                     string vertString;
                     lineStream >> vertString;
-                    int pIndex = -1, nIndex = -1 , tcIndex = -1;
+                    int pIndex = -1, nIndex = -1, tcIndex = -1;
 
                     slash1 = vertString.find("/");
-                    if( slash1 == string::npos ){
-                        pIndex = atoi( vertString.c_str() ) - 1;
-                    } else {
-                        slash2 = vertString.find("/", slash1 + 1 );
-                        pIndex = atoi( vertString.substr(0,slash1).c_str() )
-                                        - 1;
-                        if( slash2 > slash1 + 1 ) {
-                                tcIndex =
-                                        atoi( vertString.substr(slash1 + 1, slash2).c_str() )
-                                        - 1;
+                    if (slash1 == string::npos) {
+                        pIndex = atoi(vertString.c_str()) - 1;
+                    }
+                    else {
+                        slash2 = vertString.find("/", slash1 + 1);
+                        pIndex = atoi(vertString.substr(0, slash1).c_str())
+                            - 1;
+                        if (slash2 > slash1 + 1) {
+                            tcIndex =
+                                atoi(vertString.substr(slash1 + 1, slash2).c_str())
+                                - 1;
                         }
                         nIndex =
-                                atoi( vertString.substr(slash2 + 1,vertString.length()).c_str() )
-                                - 1;
+                            atoi(vertString.substr(slash2 + 1, vertString.length()).c_str())
+                            - 1;
                     }
-                    if( pIndex == -1 ) {
+                    if (pIndex == -1) {
                         printf("Missing point index!!!");
-                    } else {
+                    }
+                    else {
                         face.push_back(pIndex);
                     }
 
-                    if( loadTex && tcIndex != -1 && pIndex != tcIndex ) {
+                    if (loadTex && tcIndex != -1 && pIndex != tcIndex) {
                         printf("Texture and point indices are not consistent.\n");
                     }
-                    if ( nIndex != -1 && nIndex != pIndex ) {
+                    if (nIndex != -1 && nIndex != pIndex) {
                         printf("Normal and point indices are not consistent.\n");
                     }
                 }
                 // If number of edges in face is greater than 3,
                 // decompose into triangles as a triangle fan.
-                if( face.size() > 3 ) {
+                if (face.size() > 3) {
                     int v0 = face[0];
                     int v1 = face[1];
                     int v2 = face[2];
@@ -110,35 +115,36 @@ void SSBOMesh::loadOBJ( const char * fileName ) {
                     faces.push_back(v0);
                     faces.push_back(v1);
                     faces.push_back(v2);
-                    for( GLuint i = 3; i < face.size(); i++ ) {
+                    for (GLuint i = 3; i < face.size(); i++) {
                         v1 = v2;
                         v2 = face[i];
                         faces.push_back(v0);
                         faces.push_back(v1);
                         faces.push_back(v2);
                     }
-                } else {
+                }
+                else {
                     faces.push_back(face[0]);
                     faces.push_back(face[1]);
                     faces.push_back(face[2]);
                 }
             }
         }
-        getline( objStream, line );
+        getline(objStream, line);
     }
 
     objStream.close();
 
-    if( normals.size() == 0 ) {
-        generateAveragedNormals(points,normals,faces);
+    if (normals.size() == 0) {
+        generateAveragedNormals(points, normals, faces);
     }
 
     vector<vec4> tangents;
-    if( genTang && texCoords.size() > 0 ) {
-        generateTangents(points,normals,faces,texCoords,tangents);
+    if (genTang && texCoords.size() > 0) {
+        generateTangents(points, normals, faces, texCoords, tangents);
     }
 
-    if( reCenterMesh ) {
+    if (reCenterMesh) {
         center(points);
     }
 
@@ -162,7 +168,7 @@ void SSBOMesh::loadOBJ( const char * fileName ) {
 void SSBOMesh::generateAdjacencyList(
     const vector<vec3>& points,
     const vector<GLuint>& faces,
-    vector<vector<GLuint>>& adjacencies )
+    vector<vector<GLuint>>& adjacencies)
 {
     // Using unordered_set instead of vector for O(1) lookups
     vector<std::unordered_set<GLuint>> adjacenciesSet(points.size());
@@ -193,15 +199,19 @@ void SSBOMesh::generateAdjacencyList(
     }
 }
 
-void SSBOMesh::storeSSBO(const vector<vector<GLuint>> & adjacencies,
+void SSBOMesh::storeSSBO(const vector<vector<GLuint>>& adjacencies,
     const vector<vec3>& points,
-    const vector<GLuint> & elements)
+    const vector<GLuint>& elements)
 {
     vertices = GLuint(points.size());
     faces = GLuint(elements.size() / 3);
 
     // === SSBO for Neighbor Indices ===
-    vector<ssboVertex> vertexData(adjacencies.size());
+    float* vertPos = new float[3 * vertices];
+    float* vertPosAlt = new float[3 * vertices];
+    unsigned int* spans = new unsigned int[vertices];
+    unsigned int* offsets = new unsigned int[vertices];
+
     vector<GLuint> flatNeighbors;
 
     // Calculate total neighbors upfront
@@ -211,57 +221,74 @@ void SSBOMesh::storeSSBO(const vector<vector<GLuint>> & adjacencies,
     }
     flatNeighbors.reserve(totalNeighbors);
 
-    GLuint offset = 0;
-    for (size_t i = 0; i < adjacencies.size(); ++i) {
-        vertexData[i].position = points[i];
-        vertexData[i].valence = (GLuint)adjacencies[i].size();
-        vertexData[i].offset = offset;
-        offset += vertexData[i].valence;
+    int idx = 0, counter = 0;
+    unsigned int* el = new unsigned int[elements.size()];
+    for (unsigned int i = 0; i < elements.size(); ++i)
+    {
+        el[i] = elements[i];
+    }
+
+    for (size_t i = 0; i < vertices; ++i) {
+        vertPos[idx] = points[i].x;
+        vertPos[idx + 1] = points[i].y;
+        vertPos[idx + 2] = points[i].z;
+        vertPosAlt[idx] = points[i].x;
+        vertPosAlt[idx + 1] = points[i].y;
+        vertPosAlt[idx + 2] = points[i].z;
+        idx += 3;
+        spans[i] = (unsigned int)adjacencies[i].size();
+        offsets[i] = counter;
+        counter += spans[i];
         flatNeighbors.insert(flatNeighbors.end(), adjacencies[i].begin(), adjacencies[i].end());
     }
 
-    // === SSBO for Neighbor Indices ===
-    glGenBuffers(1, &ssboFlatNeighbors);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboFlatNeighbors);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, flatNeighbors.size() * sizeof(GLuint), flatNeighbors.data(), GL_STATIC_DRAW);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    glGenBuffers(6, ssboHandle);
+    int bufIdx = 0;
 
-    // === SSBO for Vertex Information (Position, Offset, Valence) === 
-    glGenBuffers(1, &ssboVertices);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboVertices);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, vertices * sizeof(ssboVertex), vertexData.data(), GL_STATIC_DRAW);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    // === SSBO for Neighbor Information ===
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboHandle[bufIdx++]);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, flatNeighbors.size() * sizeof(GLuint), flatNeighbors.data(), GL_STATIC_DRAW);
+
+    // === SSBO for Vertex Valence === 
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboHandle[bufIdx++]);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, vertices * sizeof(unsigned int), spans, GL_STATIC_DRAW);
+
+    // === SSBO for Vertex Offset ===
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboHandle[bufIdx++]);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, vertices * sizeof(unsigned int), offsets, GL_STATIC_DRAW);
+
+    // === SSBO for Vertex Position === 
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboHandle[bufIdx++]);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, (3 * vertices) * sizeof(float), vertPos, GL_DYNAMIC_COPY);
 
     // === Alternate SSBO for Vertex Information (Ping-pong target) === 
-    glGenBuffers(1, &ssboAltVertices);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboAltVertices);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, vertices * sizeof(ssboVertex), vertexData.data(), GL_DYNAMIC_COPY);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboHandle[bufIdx++]);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, (3 * vertices) * sizeof(float), vertPosAlt, GL_DYNAMIC_COPY);
 
     // === SSBO for face information === 
-    glGenBuffers(1, &ssboFaces);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboFaces);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, 3 * faces * sizeof(GLuint), elements.data(), GL_STATIC_COPY);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboHandle[bufIdx++]);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, 3 * faces * sizeof(unsigned int), el, GL_STATIC_COPY);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 }
 
 void SSBOMesh::smoothVertices(const int numIterations, const char outputModelFilename[]) {
     /* BIG QUESTION : To bind buffer first ? */
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboFlatNeighbors); // binding = 0
+    for (int i = 0; i < 3; ++i) {
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, i, ssboHandle[i]); // binds neighbours, vertex valence, vertex offset
+    }
 
-    GLuint buffers[2] = { ssboVertices, ssboAltVertices };
     bool evenIteration = true;
 
     // Perform N iterations of smoothing
     for (int i = 0; i < numIterations; i++) {
         // Input is buffer 0 and output is buffer 1 on even iterations
         // Input is buffer 1 and output is buffer 0 on odd iterations
-        int readIdx = evenIteration ? 0 : 1;
-        int writeIdx = evenIteration ? 1 : 0;
+        int readIdx = evenIteration ? 3 : 4;
+        int writeIdx = evenIteration ? 4 : 3;
 
         // Bind buffers to specific binding points
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, buffers[readIdx]);  // Input
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, buffers[writeIdx]); // Output
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssboHandle[readIdx]);  // Input
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssboHandle[writeIdx]); // Output
 
         cout << "Until compute shader is fine." << endl;
 
@@ -275,8 +302,9 @@ void SSBOMesh::smoothVertices(const int numIterations, const char outputModelFil
         evenIteration = !evenIteration;
     }
 
-    // Final result is in buffers[numIterations % 2] so re-assign to ssboVertices for writing to file
-    ssboVertices = buffers[numIterations % 2];
+    if (numIterations % 2 == 0) {
+        ssboHandle[4] = ssboHandle[3]; // copy data back to alternate array
+    }
 
     writeOBJ(outputModelFilename);
 }
@@ -288,7 +316,7 @@ void SSBOMesh::writeOBJ(const char* fileName) {
         return;
     }
 
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboVertices);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboHandle[4]);
     ssboVertex* vertexData = (ssboVertex*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
 
     if (!vertexData) {
@@ -306,7 +334,7 @@ void SSBOMesh::writeOBJ(const char* fileName) {
     glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
     // === Write face information (Remember OBJ file indices are 1-indexed) ===
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboFaces);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboHandle[5]);
     GLuint* faceData = (GLuint*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
 
     if (!faceData) {
@@ -324,7 +352,7 @@ void SSBOMesh::writeOBJ(const char* fileName) {
 
     outFile.close();
 
-    std::cout << "OBJ written to " << fileName << std::endl;
+    std::cout << "Smoothing complete. Output written to: " << fileName << std::endl;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -561,11 +589,11 @@ void SSBOMesh::render() const {
     glDrawElements(GL_TRIANGLES, 3 * faces, GL_UNSIGNED_INT, ((GLubyte*)NULL + (0)));
 }
 
-void SSBOMesh::trimString( string & str ) {
-    const char * whiteSpace = " \t\n\r";
+void SSBOMesh::trimString(string& str) {
+    const char* whiteSpace = " \t\n\r";
     size_t location;
     location = str.find_first_not_of(whiteSpace);
-    str.erase(0,location);
+    str.erase(0, location);
     location = str.find_last_not_of(whiteSpace);
     str.erase(location + 1);
 }
