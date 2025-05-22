@@ -53,7 +53,6 @@ void SSBOMesh::loadOBJ(const char* fileName) {
 
                 // Process face
                 face.clear();
-                //int point, texCoord, normal;
                 while (lineStream.good()) {
                     string vertString;
                     lineStream >> vertString;
@@ -147,15 +146,6 @@ void SSBOMesh::storeSSBO(const vector<vector<GLuint>>& adjacencies,
     const vector<vec3>& points,
     const vector<GLuint>& elements)
 {
-    // Print adjacencies to console first
-    for (size_t i = 0; i < adjacencies.size(); ++i) {
-        cout << "Vertex " << i << " neighbors: ";
-        for (const auto& neighbor : adjacencies[i]) {
-            cout << neighbor << " ";
-        }
-        cout << endl;
-    }
-
     vertices = GLuint(points.size());
     faces = GLuint(elements.size() / 3);
 
@@ -253,56 +243,52 @@ void SSBOMesh::smoothVertices(const int numIterations, const char outputModelFil
         evenIteration = !evenIteration;
     }
 
-    if (evenIteration) {
-        ssboHandle[4] = ssboHandle[3]; // copy data back to alternate array
-    }
-
-    writeOBJ(outputModelFilename);
-}
-
-void SSBOMesh::writeOBJ(const char* fileName) {
-    std::ofstream outFile(fileName);
-    if (!outFile) {
-        std::cerr << "Failed to open OBJ file for writing: " << fileName << std::endl;
-        return;
-    }
-
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboHandle[4]);
-    ssboVertex* vertexData = (ssboVertex*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
+    // Retrieve vertex data from GPU
+    int finalBuffer = evenIteration ? 3 : 4;
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboHandle[finalBuffer]);
+    float* vertexData = (float*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
+    glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
     if (!vertexData) {
         std::cerr << "Failed to map SSBO for reading!" << std::endl;
         return;
     }
 
-    // Write vertex positions
-    for (size_t i = 0; i < vertices; ++i) {
-        outFile << "v " << vertexData[i].position.x << " "
-            << vertexData[i].position.y << " "
-            << vertexData[i].position.z << "\n";
-    }
-
-    glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-
-    // === Write face information (Remember OBJ file indices are 1-indexed) ===
+    // Retrieve face data from GPU
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboHandle[5]);
     GLuint* faceData = (GLuint*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
+    glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
     if (!faceData) {
         std::cerr << "Failed to map SSBO for reading!" << std::endl;
         return;
     }
 
-    for (size_t i = 0; i < faces; ++i) {
-        outFile << "f " << faceData[i * 3] + 1 << " "
-            << faceData[i * 3 + 1] + 1 << " "
-            << faceData[i * 3 + 2] + 1 << "\n";
+    writeOBJ(outputModelFilename, vertexData, faceData);
+}
+
+void SSBOMesh::writeOBJ(const char* fileName, const float* vertexData, const GLuint* faceData) {
+    std::ofstream outFile(fileName);
+    if (!outFile) {
+        std::cerr << "Failed to open OBJ file for writing: " << fileName << std::endl;
+        return;
     }
 
-    glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+    // Write vertex positions
+    for (size_t i = 0; i < vertices; ++i) {
+        outFile << "v " << vertexData[3 * i + 0] << " "
+            << vertexData[3 * i + 1] << " "
+            << vertexData[3 * i + 2] << "\n";
+    }
+
+    // === Write face information (Remember OBJ file indices are 1-indexed) ===
+    for (size_t i = 0; i < faces; ++i) {
+        outFile << "f " << faceData[3 * i] + 1 << " "
+            << faceData[3 * i + 1] + 1 << " "
+            << faceData[3 * i + 2] + 1 << "\n";
+    }
 
     outFile.close();
-
     std::cout << "Smoothing complete. Output written to: " << fileName << std::endl;
 }
 

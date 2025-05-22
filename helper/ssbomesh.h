@@ -15,12 +15,6 @@ using std::string;
 
 #include "gldecl.h"
 
-struct ssboVertex {
-    vec3 position;
-    GLuint offset;
-    GLuint valence;
-};
-
 class SSBOMesh : public Drawable
 {
 private:
@@ -55,7 +49,7 @@ public:
 
     void loadOBJ(const char* fileName);
 
-    void writeOBJ(const char* fileName);
+    void writeOBJ(const char* fileName, const float* vertexData, const GLuint* faceData);
 };
 
 #endif // SSBOMESH_H
