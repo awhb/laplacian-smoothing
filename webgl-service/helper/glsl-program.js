@@ -58,4 +58,46 @@
         return program;
     }
 
+    exports.createBuffer = function (gl, sizeOrData, usage) {
+        const buf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+        gl.bufferData(gl.ARRAY_BUFFER, sizeOrData, usage);
+        return buf;
+    }
+
+    exports.calculateTextureSize = function (gl, numElements) {
+        const maxDim = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+        let width, height;
+
+        if (numElements === 0) return { width: 1, height: 1 }; // Avoid division by zero
+
+        if (numElements <= maxDim) {
+            width = numElements;
+            height = 1;
+        } else {
+            width = Math.ceil(Math.sqrt(numElements));
+            width = Math.min(width, maxDim);
+            height = Math.ceil(numElements / width);
+        }
+
+        if (height > maxDim) {
+            console.error(`Cannot fit ${numElements} elements into texture. Max dimension: ${maxDim}. Required height: ${height} for width: ${width}`);
+            throw new Error("Data too large for texture dimensions.");
+        }
+        return { width, height };
+    }
+
+    exports.createDataTexture = function (gl, internalFormat, format, type, texInfo, dataArray = null) {
+        const texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        // dataArray can be null for initial empty texture
+        gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, texInfo.width, texInfo.height, 0, format, type, dataArray);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        return texture;
+    }
+
 }));

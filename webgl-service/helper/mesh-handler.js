@@ -60,7 +60,7 @@
         };
     }
 
-    exports.calculateVertexAdjacencies = function(vertices, faces) {
+    exports.calculateVertexAdjacencies = function (vertices, faces) {
 
         const numVertices = vertices.length / 3; 
         
@@ -98,4 +98,21 @@
         return { flatNeighbors, offsets, spans };
 
     }
+
+    exports.generateOBJString = function (numVertices, numFaces, smoothedVertices, faces) {
+        if (!faces || !smoothedVertices) {
+            return "";
+        }
+        let objStr = "# Smoothed Mesh Output\n";
+        for (let i = 0; i < numVertices; i++) {
+            objStr += `v ${smoothedVertices[i * 3]} ${smoothedVertices[i * 3 + 1]} ${smoothedVertices[i * 3 + 2]}\n`;
+        }
+        objStr += "\n";
+        for (let i = 0; i < numFaces; i++) {
+            // OBJ indices are 1-based
+            objStr += `f ${faces[i * 3] + 1} ${faces[i * 3 + 1] + 1} ${faces[i * 3 + 2] + 1}\n`;
+        }
+        return objStr;
+    }
+
 }));
