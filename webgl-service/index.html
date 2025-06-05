@@ -7,17 +7,23 @@
 </head>
 <body>
   <h1>WebGL OBJ Mesh Laplacian Smoother</h1>
-  <input type="file" id="objInput" accept=".obj">
+  <p>Set the number of smoothing iterations using the slider, then upload the .obj file.
+    The program will run for that number of iterations and download the smoothed .obj file for you.
+  </p>
+
+  <label for="iterationsSlider">Number of Iterations: </label>
+  <input type="range" id="iterationsSlider" min="1" max="10" value="1">
+  <span id="iterationsValue">1</span>
+  <br><br> <input type="file" id="objInput" accept=".obj">
 <div class="no-webgl2">
-  Your browser does not support WebGL2. Please download e.g. 
-  <a href="https://www.google.com/chrome/browser/canary.html" target="_blank">Chrome Canary</a> or 
+  Your browser does not support WebGL2. Please download e.g.
+  <a href="https://www.google.com/chrome/browser/canary.html" target="_blank">Chrome Canary</a> or
   <a href="https://www.mozilla.org/en-US/firefox/channel/desktop/" target="_blank">Firefox Beta</a>.
 <div>
   <canvas id="glCanvas"></canvas>
-  <script src="helper/m4.js"></script>
-  <script src="helper/webgl-utils.js"></script>
-  <script src="helper/mesh-handler.js"></script>
   <script src="helper/glsl-program.js"></script>
+  <script src="helper/mesh-handler.js"></script>
+  <script src="helper/webgl-utils.js"></script>
   <script src="main.js"></script>
 </body>
 </html>
