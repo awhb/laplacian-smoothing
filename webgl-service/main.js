@@ -83,6 +83,18 @@ async function main() {
 
 
     document.getElementById("objInput").addEventListener("change", async (e) => {
+        // Define handles to destroy GPU resources later
+        let smoothingProgram = null;
+        let transformFeedback = null;
+        let vao = null;
+        let posFeedbackBufferA = null; 
+        let posFeedbackBufferB = null; 
+        let tempUnpackBuffer = null;
+        let positionTextureA = null;
+        let positionTextureB = null;
+        let offsetsSpansTexture = null;
+        let flatNeighborsTexture = null;
+
         try {
             /** Load from OBJ file input */
             const file = e.target.files[0];
@@ -99,7 +111,7 @@ async function main() {
             console.log(`Adjacency calculated: ${numNeighbors} total neighbor links.`);
 
             // Create GLSL Program
-            const smoothingProgram = GLSLProgram.createProgram(
+            smoothingProgram = GLSLProgram.createProgram(
                 gl, vsSource, fsSource, ['v_newPosition'], {bufferMode: gl.INTERLEAVED_ATTRIBS} 
             );
 
@@ -114,20 +126,20 @@ async function main() {
 
             /** Prepare Transform Feedback Buffers */
             // Create Transform Feedback Object
-            const transformFeedback = gl.createTransformFeedback();
+            transformFeedback = gl.createTransformFeedback();
 
             // Buffers for vertex positions (Transform Feedback targets)
-            const posFeedbackBufferA = GLSLProgram.createBuffer(gl, vertices, gl.DYNAMIC_COPY);
-            const posFeedbackBufferB = GLSLProgram.createBuffer(gl, vertices, gl.DYNAMIC_COPY);
+            posFeedbackBufferA = GLSLProgram.createBuffer(gl, vertices, gl.DYNAMIC_COPY);
+            posFeedbackBufferB = GLSLProgram.createBuffer(gl, vertices, gl.DYNAMIC_COPY);
 
             // Pixel unpack buffer for copying to texture
-            const tempUnpackBuffer = GLSLProgram.createBuffer(gl, new Float32Array(numVertices * 3), gl.STREAM_READ); // Or gl.STREAM_READ
+            tempUnpackBuffer = GLSLProgram.createBuffer(gl, new Float32Array(numVertices * 3), gl.STREAM_READ); // Or gl.STREAM_READ
 
             /** Prepare Uniform Textures */
             // Position Textures (RGB32F)
             const posTexInfo = GLSLProgram.calculateTextureSize(gl, numVertices);
-            const positionTextureA = GLSLProgram.createDataTexture(gl, gl.RGB32F, gl.RGB, gl.FLOAT, posTexInfo, vertices);
-            const positionTextureB = GLSLProgram.createDataTexture(gl, gl.RGB32F, gl.RGB, gl.FLOAT, posTexInfo, null); // Empty
+            positionTextureA = GLSLProgram.createDataTexture(gl, gl.RGB32F, gl.RGB, gl.FLOAT, posTexInfo, vertices);
+            positionTextureB = GLSLProgram.createDataTexture(gl, gl.RGB32F, gl.RGB, gl.FLOAT, posTexInfo, null); // Empty
 
             // Adjacency Textures (Integer Textures)
             // Offsets and Spans (RG32UI) - combines offsets and spans
@@ -136,14 +148,14 @@ async function main() {
                 offsetsSpansData[i * 2 + 0] = offsets[i];
                 offsetsSpansData[i * 2 + 1] = spans[i];
             }
-            const offsetsSpansTexture = GLSLProgram.createDataTexture(gl, gl.RG32UI, gl.RG_INTEGER, gl.UNSIGNED_INT, posTexInfo, offsetsSpansData);
+            offsetsSpansTexture = GLSLProgram.createDataTexture(gl, gl.RG32UI, gl.RG_INTEGER, gl.UNSIGNED_INT, posTexInfo, offsetsSpansData);
 
             // Flat Neighbors (R32UI)
             const neighborsTexInfo = GLSLProgram.calculateTextureSize(gl, flatNeighbors.length);
-            const flatNeighborsTexture = GLSLProgram.createDataTexture(gl, gl.R32UI, gl.RED_INTEGER, gl.UNSIGNED_INT, neighborsTexInfo, flatNeighbors);
+            flatNeighborsTexture = GLSLProgram.createDataTexture(gl, gl.R32UI, gl.RED_INTEGER, gl.UNSIGNED_INT, neighborsTexInfo, flatNeighbors);
 
             // 5. Dummy VAO (needed for gl.drawArrays in WebGL 2.0 core profile if no attributes are bound)
-            const vao = gl.createVertexArray();
+            vao = gl.createVertexArray();
 
             /** Perform smoothing operation */
             if (!smoothingProgram || !vertices) {
@@ -251,38 +263,22 @@ async function main() {
         } catch (error) {
             console.error("Error during smoothing process:", error);
         } finally {
-            // if (gl) {
-            //     if (smoothingProgram) gl.deleteProgram(smoothingProgram);
-            //     if (transformFeedback) gl.deleteTransformFeedback(transformFeedback);
-            //     if (vao) gl.deleteVertexArray(vao);
+            if (gl) {
+                if (smoothingProgram) gl.deleteProgram(smoothingProgram);
+                if (transformFeedback) gl.deleteTransformFeedback(transformFeedback);
+                if (vao) gl.deleteVertexArray(vao);
 
-            //     if (posFeedbackBufferA) gl.deleteBuffer(posFeedbackBufferA);
-            //     if (posFeedbackBufferB) gl.deleteBuffer(posFeedbackBufferB);
+                if (posFeedbackBufferA) gl.deleteBuffer(posFeedbackBufferA);
+                if (posFeedbackBufferB) gl.deleteBuffer(posFeedbackBufferB);
+                if (tempUnpackBuffer) gl.deleteBuffer(tempUnpackBuffer);
 
-            //     if (positionTextureA) gl.deleteTexture(positionTextureA);
-            //     if (positionTextureB) gl.deleteTexture(positionTextureB);
-            //     if (offsetsSpansTexture) gl.deleteTexture(offsetsSpansTexture);
-            //     if (flatNeighborsTexture) gl.deleteTexture(flatNeighborsTexture);
+                if (positionTextureA) gl.deleteTexture(positionTextureA);
+                if (positionTextureB) gl.deleteTexture(positionTextureB);
+                if (offsetsSpansTexture) gl.deleteTexture(offsetsSpansTexture);
+                if (flatNeighborsTexture) gl.deleteTexture(flatNeighborsTexture);
 
-            //     // Nullify properties
-            //     if (uniformLocations) {
-            //         uniformLocations.positionTex = null;
-            //         uniformLocations.offsetsSpansTex = null;
-            //         uniformLocations.flatNeighborsTex = null;
-            //         uniformLocations.posTexWidth = null;
-            //         uniformLocations.neighborsTexWidth = null;
-            //     }
-
-            //     // Specifically clear meshData GPU-related arrays if they are large, but keep core counts
-            //     flatNeighbors = null;
-            //     offsets = null;
-            //     spans = null; 
-            //     vertices = null;
-            //     faces = null;  // Keep vertices/faces if they might be reused without reloading
-                
-            //     console.log("GPU resources destroyed.");
-            // }
-
+                console.log("GPU resources destroyed.");
+            }
         }
 
     });
