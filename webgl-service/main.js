@@ -124,17 +124,6 @@ async function main() {
                 neighborsTexWidth: gl.getUniformLocation(smoothingProgram, "u_neighborsTexWidth")
             };
 
-            /** Prepare Transform Feedback Buffers */
-            // Create Transform Feedback Object
-            transformFeedback = gl.createTransformFeedback();
-
-            // Buffers for vertex positions (Transform Feedback targets)
-            posFeedbackBufferA = GLSLProgram.createBuffer(gl, vertices, gl.DYNAMIC_COPY);
-            posFeedbackBufferB = GLSLProgram.createBuffer(gl, vertices, gl.DYNAMIC_COPY);
-
-            // Pixel unpack buffer for copying to texture
-            tempUnpackBuffer = GLSLProgram.createBuffer(gl, new Float32Array(numVertices * 3), gl.STREAM_READ); // Or gl.STREAM_READ
-
             /** Prepare Uniform Textures */
             // Position Textures (RGB32F)
             const posTexInfo = GLSLProgram.calculateTextureSize(gl, numVertices);
@@ -154,7 +143,18 @@ async function main() {
             const neighborsTexInfo = GLSLProgram.calculateTextureSize(gl, flatNeighbors.length);
             flatNeighborsTexture = GLSLProgram.createDataTexture(gl, gl.R32UI, gl.RED_INTEGER, gl.UNSIGNED_INT, neighborsTexInfo, flatNeighbors);
 
-            // 5. Dummy VAO (needed for gl.drawArrays in WebGL 2.0 core profile if no attributes are bound)
+            /** Prepare Transform Feedback Buffers */
+            // Create Transform Feedback Object
+            transformFeedback = gl.createTransformFeedback();
+
+            // Buffers for vertex positions (Transform Feedback targets)
+            posFeedbackBufferA = GLSLProgram.createBuffer(gl, vertices, gl.DYNAMIC_COPY);
+            posFeedbackBufferB = GLSLProgram.createBuffer(gl, vertices, gl.DYNAMIC_COPY);
+
+            // Pixel unpack buffer for copying to texture
+            tempUnpackBuffer = GLSLProgram.createBuffer(gl, new Float32Array(numVertices * 3), gl.STREAM_READ);
+
+            // Dummy VAO (needed for gl.drawArrays in WebGL 2.0 core profile if no attributes are bound)
             vao = gl.createVertexArray();
 
             /** Perform smoothing operation */
