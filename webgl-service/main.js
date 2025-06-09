@@ -144,15 +144,18 @@ async function main() {
             flatNeighborsTexture = GLSLProgram.createDataTexture(gl, gl.R32UI, gl.RED_INTEGER, gl.UNSIGNED_INT, neighborsTexInfo, flatNeighbors);
 
             /** Prepare Transform Feedback Buffers */
+            // Create padded buffer with size that can perfectly map to data texture
+            const vertTextureBuffer = new Float32Array(posTexInfo.width * posTexInfo.height * 3);
+
             // Create Transform Feedback Object
             transformFeedback = gl.createTransformFeedback();
 
             // Buffers for vertex positions (Transform Feedback targets)
-            posFeedbackBufferA = GLSLProgram.createBuffer(gl, vertices, gl.DYNAMIC_COPY);
-            posFeedbackBufferB = GLSLProgram.createBuffer(gl, vertices, gl.DYNAMIC_COPY);
+            posFeedbackBufferA = GLSLProgram.createBuffer(gl, vertTextureBuffer, gl.DYNAMIC_COPY);
+            posFeedbackBufferB = GLSLProgram.createBuffer(gl, vertTextureBuffer, gl.DYNAMIC_COPY);
 
             // Pixel unpack buffer for copying to texture
-            tempUnpackBuffer = GLSLProgram.createBuffer(gl, new Float32Array(numVertices * 3), gl.STREAM_READ);
+            tempUnpackBuffer = GLSLProgram.createBuffer(gl, vertTextureBuffer, gl.STREAM_READ);
 
             // Dummy VAO (needed for gl.drawArrays in WebGL 2.0 core profile if no attributes are bound)
             vao = gl.createVertexArray();
