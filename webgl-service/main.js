@@ -8,11 +8,11 @@ async function main() {
         precision highp int;
         precision highp usampler2D;
 
-        uniform sampler2D u_positionTex;      // Current vertex positions (RGB32F)
+        uniform sampler2D u_vCoordsTex;      // Current vertex coordinates (RGB32F)
         uniform usampler2D u_offsetsSpansTex; // (offset, span) for each vertex (RG32UI)
         uniform usampler2D u_flatNeighborsTex;  // Flattened neighbor indices (R32UI)
 
-        uniform int u_posTexWidth;
+        uniform int u_vCoordsTexWidth;
         uniform int u_neighborsTexWidth;
 
         out vec3 v_newPosition;
@@ -23,13 +23,13 @@ async function main() {
 
         void main() {
             int vertexID = gl_VertexID;
-            ivec2 posTexCoord = getTexCoord(vertexID, u_posTexWidth);
+            ivec2 vPosTexCoord = getTexCoord(vertexID, u_vCoordsTexWidth);
 
-            uvec2 offsetSpan = texelFetch(u_offsetsSpansTex, posTexCoord, 0).rg;
+            uvec2 offsetSpan = texelFetch(u_offsetsSpansTex, vPosTexCoord, 0).rg;
             uint offset = offsetSpan.r;
             uint span = offsetSpan.g;
 
-            vec3 currentPos = texelFetch(u_positionTex, posTexCoord, 0).rgb;
+            vec3 currentPos = texelFetch(u_vCoordsTex, vPosTexCoord, 0).rgb;
             vec3 newPos = currentPos; // Default to current if no neighbors
 
             if (span > 0u) {
@@ -37,11 +37,11 @@ async function main() {
                 for (uint i = 0u; i < span; ++i) {
                     uint neighborGlobalFlatIndex = offset + i;
                     ivec2 neighborIndexTexCoord = getTexCoord(int(neighborGlobalFlatIndex), u_neighborsTexWidth);
-                    
+                            
                     uint neighborVertexID = texelFetch(u_flatNeighborsTex, neighborIndexTexCoord, 0).r;
 
-                    ivec2 neighborPosTexCoord = getTexCoord(int(neighborVertexID), u_posTexWidth);
-                    sumNeighborPositions += texelFetch(u_positionTex, neighborPosTexCoord, 0).rgb;
+                    ivec2 neighborPosTexCoord = getTexCoord(int(neighborVertexID), u_vCoordsTexWidth);
+                    sumNeighborPositions += texelFetch(u_vCoordsTex, neighborPosTexCoord, 0).rgb;
                 }
                 newPos = sumNeighborPositions / float(span);
             }
@@ -90,8 +90,8 @@ async function main() {
         let posFeedbackBufferA = null; 
         let posFeedbackBufferB = null; 
         let tempUnpackBuffer = null;
-        let positionTextureA = null;
-        let positionTextureB = null;
+        let vCoordsTextureA = null;
+        let vCoordsTextureB = null;
         let offsetsSpansTexture = null;
         let flatNeighborsTexture = null;
 
@@ -117,9 +117,9 @@ async function main() {
 
             /** Prepare Uniform Textures */
             // Position Textures (RGB32F)
-            const posTexInfo = GLSLProgram.calculateTextureSize(gl, numVertices);
-            positionTextureA = GLSLProgram.createDataTexture(gl, gl.RGB32F, gl.RGB, gl.FLOAT, posTexInfo, vertices);
-            positionTextureB = GLSLProgram.createDataTexture(gl, gl.RGB32F, gl.RGB, gl.FLOAT, posTexInfo, null); // Empty
+            const vCoordsTexInfo = GLSLProgram.calculateTextureSize(gl, numVertices);
+            vCoordsTextureA = GLSLProgram.createDataTexture(gl, gl.RGB32F, gl.RGB, gl.FLOAT, vCoordsTexInfo, vertices);
+            vCoordsTextureB = GLSLProgram.createDataTexture(gl, gl.RGB32F, gl.RGB, gl.FLOAT, vCoordsTexInfo, null); // Empty
 
             // Adjacency Textures (Integer Textures)
             // Offsets and Spans (RG32UI) - combines offsets and spans
@@ -128,7 +128,7 @@ async function main() {
                 offsetsSpansData[i * 2 + 0] = offsets[i];
                 offsetsSpansData[i * 2 + 1] = spans[i];
             }
-            offsetsSpansTexture = GLSLProgram.createDataTexture(gl, gl.RG32UI, gl.RG_INTEGER, gl.UNSIGNED_INT, posTexInfo, offsetsSpansData);
+            offsetsSpansTexture = GLSLProgram.createDataTexture(gl, gl.RG32UI, gl.RG_INTEGER, gl.UNSIGNED_INT, vCoordsTexInfo, offsetsSpansData);
 
             // Flat Neighbors (R32UI)
             const neighborsTexInfo = GLSLProgram.calculateTextureSize(gl, flatNeighbors.length);
@@ -136,7 +136,7 @@ async function main() {
 
             /** Prepare Transform Feedback Buffers */
             // Create padded buffer with size that can perfectly map to data texture
-            const vertTextureBuffer = new Float32Array(posTexInfo.width * posTexInfo.height * 3);
+            const vertTextureBuffer = new Float32Array(vCoordsTexInfo.width * vCoordsTexInfo.height * 3);
 
             // Create Transform Feedback Object
             transformFeedback = gl.createTransformFeedback();
@@ -158,11 +158,10 @@ async function main() {
 
             console.time(`Smoothing ${numIterations} iterations`);
 
-            let currentPositionTexture = positionTextureA;
-            let nextPositionTexture = positionTextureB;
-            let currentReadBuffer = posFeedbackBufferA; // Buffer corresponding to positionTextureA
-            let currentWriteBuffer = posFeedbackBufferB;
-
+            let currVCoordsTex = vCoordsTextureA;
+            let nextVCoordsTex = vCoordsTextureB;
+            let currFeedbackBuf = posFeedbackBufferA; // Buffer corresponding to vCoordsTextureA
+            let nextFeedbackBuf = posFeedbackBufferB;
 
             gl.useProgram(smoothingProgram);
             gl.bindVertexArray(vao); // Bind dummy VAO
@@ -175,28 +174,28 @@ async function main() {
 
             // Fetch uniform locations 
             const uniformLocations = {
-                positionTex: gl.getUniformLocation(smoothingProgram, "u_positionTex"),
+                vCoordsTex: gl.getUniformLocation(smoothingProgram, "u_vCoordsTex"),
                 offsetsSpansTex: gl.getUniformLocation(smoothingProgram, "u_offsetsSpansTex"),
                 flatNeighborsTex: gl.getUniformLocation(smoothingProgram, "u_flatNeighborsTex"),
-                posTexWidth: gl.getUniformLocation(smoothingProgram, "u_posTexWidth"),
+                vCoordsTexWidth: gl.getUniformLocation(smoothingProgram, "u_vCoordsTexWidth"),
                 neighborsTexWidth: gl.getUniformLocation(smoothingProgram, "u_neighborsTexWidth")
             };
 
             // Set uniforms that don't change per iteration
             gl.uniform1i(uniformLocations.offsetsSpansTex, 1); // Texture unit 1
             gl.uniform1i(uniformLocations.flatNeighborsTex, 2); // Texture unit 2
-            gl.uniform1i(uniformLocations.posTexWidth, posTexInfo.width);
+            gl.uniform1i(uniformLocations.vCoordsTexWidth, vCoordsTexInfo.width);
             gl.uniform1i(uniformLocations.neighborsTexWidth, neighborsTexInfo.width);
 
             for (let i = 0; i < numIterations; i++) {
                 // 1. Bind input position texture (current state)
                 gl.activeTexture(gl.TEXTURE0); // Active texture unit for positions
-                gl.bindTexture(gl.TEXTURE_2D, currentPositionTexture);
+                gl.bindTexture(gl.TEXTURE_2D, currVCoordsTex);
                 gl.uniform1i(uniformLocations.positionTex, 0); // Tell shader sampler to use texture unit 0
 
-                // 2. Configure Transform Feedback to write to currentWriteBuffer
+                // 2. Configure Transform Feedback to write to currFeedbackBuf
                 gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, transformFeedback);
-                gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, currentWriteBuffer);
+                gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, currFeedbackBuf);
 
                 // 3. Execute shader (disable rasterization as we only care about TF)
                 gl.enable(gl.RASTERIZER_DISCARD);
@@ -209,24 +208,24 @@ async function main() {
                 gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, null);
                 gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, null);
 
-                // 5. Transfer data from currentWriteBuffer to tempUnpackBuffer
-                gl.bindBuffer(gl.COPY_READ_BUFFER, currentWriteBuffer); // Source for copy
+                // 5. Transfer data from currFeedbackBuf to tempUnpackBuffer
+                gl.bindBuffer(gl.COPY_READ_BUFFER, currFeedbackBuf); // Source for copy
                 gl.bindBuffer(gl.COPY_WRITE_BUFFER, tempUnpackBuffer); // Destination for copy
                 gl.copyBufferSubData(gl.COPY_READ_BUFFER, gl.COPY_WRITE_BUFFER, 0, 0, numVertices * 3 * Float32Array.BYTES_PER_ELEMENT);
                 gl.bindBuffer(gl.COPY_READ_BUFFER, null);
                 gl.bindBuffer(gl.COPY_WRITE_BUFFER, null);
 
                 // 6. Update the *next* input texture with data from tempUnpackBuffer
-                gl.bindTexture(gl.TEXTURE_2D, nextPositionTexture);
+                gl.bindTexture(gl.TEXTURE_2D, nextVCoordsTex);
                 gl.bindBuffer(gl.PIXEL_UNPACK_BUFFER, tempUnpackBuffer); // Use the temp buffer
-                gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, posTexInfo.width, posTexInfo.height,
+                gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, vCoordsTexInfo.width, vCoordsTexInfo.height,
                                 gl.RGB, gl.FLOAT, 0); // Offset 0 from PIXEL_UNPACK_BUFFER
                 gl.bindBuffer(gl.PIXEL_UNPACK_BUFFER, null);
                 gl.bindTexture(gl.TEXTURE_2D, null);
 
                 // 7. Ping-Pong for next iteration
-                [currentPositionTexture, nextPositionTexture] = [nextPositionTexture, currentPositionTexture];
-                [currentReadBuffer, currentWriteBuffer] = [currentWriteBuffer, currentReadBuffer]; // This is fine
+                [currVCoordsTex, nextVCoordsTex] = [nextVCoordsTex, currVCoordsTex];
+                [currFeedbackBuf, nextFeedbackBuf] = [nextFeedbackBuf, currFeedbackBuf]; // This is fine
 
                 console.log(`Iteration ${i + 1} complete.`);
             }
@@ -234,17 +233,16 @@ async function main() {
             gl.bindVertexArray(null);
             gl.useProgram(null);
 
-            // The final results are in currentReadBuffer (which was last written to)
-            // and its corresponding texture currentPositionTexture
+            // The final results are in nextFeedbackBuf (which was last written to)
 
             console.timeEnd(`Smoothing ${numIterations} iterations`);
 
-            if (!currentReadBuffer) {
+            if (!nextFeedbackBuf) {
                 throw new Error("Smoothing has not been run or not initialized.");
             }
 
             const smoothedVertices = new Float32Array(numVertices * 3);
-            gl.bindBuffer(gl.ARRAY_BUFFER, currentReadBuffer); // This buffer has the latest data
+            gl.bindBuffer(gl.ARRAY_BUFFER, nextFeedbackBuf); // This buffer has the latest data
             gl.getBufferSubData(gl.ARRAY_BUFFER, 0, smoothedVertices);
             gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
@@ -275,8 +273,8 @@ async function main() {
                 if (posFeedbackBufferB) gl.deleteBuffer(posFeedbackBufferB);
                 if (tempUnpackBuffer) gl.deleteBuffer(tempUnpackBuffer);
 
-                if (positionTextureA) gl.deleteTexture(positionTextureA);
-                if (positionTextureB) gl.deleteTexture(positionTextureB);
+                if (vCoordsTextureA) gl.deleteTexture(vCoordsTextureA);
+                if (vCoordsTextureB) gl.deleteTexture(vCoordsTextureB);
                 if (offsetsSpansTexture) gl.deleteTexture(offsetsSpansTexture);
                 if (flatNeighborsTexture) gl.deleteTexture(flatNeighborsTexture);
 
