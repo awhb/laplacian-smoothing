@@ -115,15 +115,6 @@ async function main() {
                 gl, vsSource, fsSource, ['v_newPosition'], {bufferMode: gl.INTERLEAVED_ATTRIBS} 
             );
 
-            // Fetch uniform locations 
-            const uniformLocations = {
-                positionTex: gl.getUniformLocation(smoothingProgram, "u_positionTex"),
-                offsetsSpansTex: gl.getUniformLocation(smoothingProgram, "u_offsetsSpansTex"),
-                flatNeighborsTex: gl.getUniformLocation(smoothingProgram, "u_flatNeighborsTex"),
-                posTexWidth: gl.getUniformLocation(smoothingProgram, "u_posTexWidth"),
-                neighborsTexWidth: gl.getUniformLocation(smoothingProgram, "u_neighborsTexWidth")
-            };
-
             /** Prepare Uniform Textures */
             // Position Textures (RGB32F)
             const posTexInfo = GLSLProgram.calculateTextureSize(gl, numVertices);
@@ -181,6 +172,15 @@ async function main() {
             gl.bindTexture(gl.TEXTURE_2D, offsetsSpansTexture);
             gl.activeTexture(gl.TEXTURE2);
             gl.bindTexture(gl.TEXTURE_2D, flatNeighborsTexture);
+
+            // Fetch uniform locations 
+            const uniformLocations = {
+                positionTex: gl.getUniformLocation(smoothingProgram, "u_positionTex"),
+                offsetsSpansTex: gl.getUniformLocation(smoothingProgram, "u_offsetsSpansTex"),
+                flatNeighborsTex: gl.getUniformLocation(smoothingProgram, "u_flatNeighborsTex"),
+                posTexWidth: gl.getUniformLocation(smoothingProgram, "u_posTexWidth"),
+                neighborsTexWidth: gl.getUniformLocation(smoothingProgram, "u_neighborsTexWidth")
+            };
 
             // Set uniforms that don't change per iteration
             gl.uniform1i(uniformLocations.offsetsSpansTex, 1); // Texture unit 1
